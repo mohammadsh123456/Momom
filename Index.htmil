@@ -1,0 +1,1822 @@
+*Thinking...*
+
+> It seems the user wants the code to be in a more usable application format. Let me explain the situation.
+> 
+> In the Poe Canvas environment, I cannot directly provide a downloadable application. I can only provide code that runs in the browser canvas. The code I've already provided is a complete web application that can run in a browser.
+> 
+> Given the constraints, I have a few options to make the code more "application-like":
+> 
+> 1. Add a manifest.json to make it a Progressive Web App (PWA) - this would allow installation on mobile devices and desktops
+> 2. Explain how to save the HTML file and use it locally, which essentially makes it an offline-capable application
+> 3. Provide clear instructions on how to use platforms like GitHub Pages to turn this into a hosted web application
+> 4. Add service worker code to enable offline capabilities
+> 
+> Let me create a more "application-ready" version with a few enhancements:
+> 1. Add a service worker for offline capabilities
+> 2. Add a manifest.json for PWA installation
+> 3. Improve the caching strategy for files
+> 4. Add app installation instructions
+> 5. Emphasize the standalone capabilities
+> 
+> This way, when users save the HTML file, they'll have a complete web application that can be installed on devices and work offline.
+
+# تحويل الكود إلى تطبيق ويب كامل
+
+لتحويل هذا الكود إلى تطبيق ويب كامل قابل للتثبيت، ستحتاج إلى الملفات التالية:
+
+```html id=indexFile
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المنتجات والأقسام</title>
+    <meta name="description" content="تطبيق لإدارة المنتجات والأقسام مع تحويل العملات">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#5D5CDE">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%235D5CDE' d='M3 3h18v18H3V3zm16 16V5H5v14h14zm-6-3H7v-2h6v2zm4-4H7v-2h10v2zm0-4H7V6h10v2z'/%3E%3C/svg%3E" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%235D5CDE' rx='12' ry='12'/%3E%3Cpath fill='white' d='M7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h6v2H7v-2z'/%3E%3C/svg%3E">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        
+        /* Dark mode styles */
+        .dark {
+            color-scheme: dark;
+        }
+
+        /* Transition for view changes */
+        .view-transition {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .view-transition.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Modal animations */
+        .modal-overlay {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+        }
+        .modal-container {
+            transform: translateY(50px);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .modal-container.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        /* Fixed action buttons */
+        .fixed-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 40;
+        }
+        
+        /* Highlight search results */
+        .highlight {
+            background-color: yellow;
+            color: black;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+        
+        /* App installation prompt */
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #5D5CDE;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 50;
+            animation: slideUp 0.3s forwards;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Spinning animation for loading */
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased">
+    <div class="min-h-screen bg-white dark:bg-[#181818] dark:text-white transition-colors duration-300">
+        <div class="container mx-auto px-4 py-6">
+            <!-- Header with app title and dollar rate -->
+            <div class="flex flex-col md:flex-row items-center justify-between mb-4">
+                <h1 class="text-3xl font-bold text-primary">إدارة المنتجات</h1>
+                
+                <div class="flex items-center mt-4 md:mt-0 bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
+                    <label for="dollar-rate" class="ml-2 font-medium">سعر الدولار:</label>
+                    <input type="number" id="dollar-rate" class="w-28 p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-base" value="13000">
+                    <span class="mr-2">ل.س</span>
+                </div>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="relative mb-6">
+                <div class="flex">
+                    <div class="relative flex-grow">
+                        <input 
+                            type="text" 
+                            id="search-input" 
+                            placeholder="ابحث عن منتج أو قسم..." 
+                            class="w-full p-3 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-base"
+                        >
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <button 
+                            id="clear-search" 
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hidden"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="ml-2">
+                        <button id="export-data" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            تصدير
+                        </button>
+                    </div>
+                    <div class="ml-2">
+                        <input type="file" id="import-file" accept=".json" class="hidden">
+                        <button id="import-data" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            استيراد
+                        </button>
+                    </div>
+                </div>
+                <!-- Search Results Counter -->
+                <div id="search-results-count" class="text-sm text-gray-500 mt-1 hidden">
+                    لا توجد نتائج بحث
+                </div>
+            </div>
+            
+            <!-- Navigation / Breadcrumbs -->
+            <div class="flex items-center mb-6 text-gray-600 dark:text-gray-400">
+                <button id="home-btn" class="flex items-center hover:text-primary transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                    </svg>
+                    الرئيسية
+                </button>
+                <span id="category-breadcrumb" class="hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mx-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    <span id="current-category-name" class="flex items-center">
+                        <span id="category-name-display"></span>
+                        <button id="edit-category-name-btn" class="mr-2 text-gray-500 hover:text-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                        </button>
+                    </span>
+                </span>
+            </div>
+            
+            <!-- Save Data Button (Top) -->
+            <div class="flex justify-end mb-4">
+                <button id="save-data-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
+                    </svg>
+                    حفظ البيانات
+                </button>
+            </div>
+            
+            <!-- Main Content Views -->
+            <div id="views-container">
+                <!-- Categories View (Home) -->
+                <div id="categories-view" class="view-transition active">
+                    <!-- Categories List -->
+                    <div id="categories-list" class="grid grid-cols-2 gap-4">
+                        <div class="text-center text-gray-500 dark:text-gray-400 p-8 col-span-full" id="no-categories">
+                            لا توجد أقسام. أضف قسماً جديداً للبدء.
+                        </div>
+                        <!-- Categories will be dynamically added here -->
+                    </div>
+                </div>
+                
+                <!-- Category Details View (Products) -->
+                <div id="category-details-view" class="view-transition hidden">
+                    <!-- Products List -->
+                    <div id="products-list" class="overflow-x-auto">
+                        <div class="text-center text-gray-500 dark:text-gray-400 p-8" id="no-products">
+                            لا توجد منتجات في هذا القسم. أضف منتجاً جديداً للبدء.
+                        </div>
+                        <table class="w-full border-collapse hidden" id="products-table">
+                            <thead>
+                                <tr class="bg-gray-200 dark:bg-gray-700">
+                                    <th class="p-3 text-right">المنتج</th>
+                                    <th class="p-3 text-right">السعر (دولار)</th>
+                                    <th class="p-3 text-right">السعر (ل.س)</th>
+                                    <th class="p-3 text-center">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Install Prompt -->
+    <div id="install-prompt" class="install-prompt">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>تثبيت التطبيق على جهازك</span>
+            </div>
+            <div class="flex">
+                <button id="install-later" class="text-white/80 hover:text-white ml-2">لاحقاً</button>
+                <button id="install-now" class="bg-white text-primary px-3 py-1 rounded-lg font-medium">تثبيت</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fixed Action Button -->
+    <div id="add-button" class="fixed-btn">
+        <button id="add-category-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center mb-2 hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            إضافة قسم
+        </button>
+        <button id="add-product-btn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            إضافة منتج
+        </button>
+    </div>
+    
+    <!-- Modals -->
+    <!-- Add Category Modal -->
+    <div id="add-category-modal" class="fixed inset-0 z-50 overflow-auto hidden">
+        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="modal-container bg-white dark:bg-gray-800 w-full max-w-md mx-auto rounded-lg shadow-lg overflow-hidden">
+                <div class="px-6 py-4 bg-primary text-white">
+                    <h3 class="text-lg font-bold">إضافة قسم جديد</h3>
+                </div>
+                <div class="p-6">
+                    <div class="mb-4">
+                        <label for="modal-category-name" class="block mb-2 font-medium">اسم القسم</label>
+                        <input type="text" id="modal-category-name" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-base" placeholder="أدخل اسم القسم">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="modal-category-bg-color" class="block mb-2 font-medium">لون الخلفية</label>
+                            <input type="color" id="modal-category-bg-color" class="w-full h-10 rounded cursor-pointer" value="#5D5CDE">
+                        </div>
+                        <div>
+                            <label for="modal-category-text-color" class="block mb-2 font-medium">لون النص</label>
+                            <input type="color" id="modal-category-text-color" class="w-full h-10 rounded cursor-pointer" value="#FFFFFF">
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-2 space-x-reverse">
+                        <button id="modal-cancel-category" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                            إلغاء
+                        </button>
+                        <button id="modal-save-category" class="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded transition-colors">
+                            حفظ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Product Modal -->
+    <div id="add-product-modal" class="fixed inset-0 z-50 overflow-auto hidden">
+        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="modal-container bg-white dark:bg-gray-800 w-full max-w-lg mx-auto rounded-lg shadow-lg overflow-hidden">
+                <div class="px-6 py-4 bg-primary text-white">
+                    <h3 class="text-lg font-bold">إضافة منتج جديد</h3>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="modal-product-name" class="block mb-2 font-medium">اسم المنتج</label>
+                            <input type="text" id="modal-product-name" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-base" placeholder="أدخل اسم المنتج">
+                        </div>
+                        <div>
+                            <label for="modal-product-price" class="block mb-2 font-medium">السعر بالدولار</label>
+                            <input type="number" id="modal-product-price" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-base" placeholder="السعر">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="modal-product-price-syp" class="block mb-2 font-medium">السعر بالليرة السورية</label>
+                        <input type="text" id="modal-product-price-syp" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-600 text-base" readonly placeholder="يحسب تلقائياً">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="modal-product-bg-color" class="block mb-2 font-medium">لون الخلفية</label>
+                            <input type="color" id="modal-product-bg-color" class="w-full h-10 rounded cursor-pointer" value="#FFFFFF">
+                        </div>
+                        <div>
+                            <label for="modal-product-text-color" class="block mb-2 font-medium">لون النص</label>
+                            <input type="color" id="modal-product-text-color" class="w-full h-10 rounded cursor-pointer" value="#000000">
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-2 space-x-reverse">
+                        <button id="modal-cancel-product" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                            إلغاء
+                        </button>
+                        <button id="modal-save-product" class="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded transition-colors">
+                            حفظ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Category Modal -->
+    <div id="edit-category-modal" class="fixed inset-0 z-50 overflow-auto hidden">
+        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="modal-container bg-white dark:bg-gray-800 w-full max-w-md mx-auto rounded-lg shadow-lg overflow-hidden">
+                <div class="px-6 py-4 bg-primary text-white">
+                    <h3 class="text-lg font-bold">تعديل القسم</h3>
+                </div>
+                <div class="p-6">
+                    <div class="mb-4">
+                        <label for="modal-edit-category-name" class="block mb-2 font-medium">اسم القسم</label>
+                        <input type="text" id="modal-edit-category-name" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-base" placeholder="أدخل اسم القسم الجديد">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="modal-edit-category-bg-color" class="block mb-2 font-medium">لون الخلفية</label>
+                            <input type="color" id="modal-edit-category-bg-color" class="w-full h-10 rounded cursor-pointer">
+                        </div>
+                        <div>
+                            <label for="modal-edit-category-text-color" class="block mb-2 font-medium">لون النص</label>
+                            <input type="color" id="modal-edit-category-text-color" class="w-full h-10 rounded cursor-pointer">
+                        </div>
+                    </div>
+                    <div class="flex justify-between">
+                        <button id="modal-delete-category" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors">
+                            حذف القسم
+                        </button>
+                        <div class="flex space-x-2 space-x-reverse">
+                            <button id="modal-cancel-edit-category" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                                إلغاء
+                            </button>
+                            <button id="modal-save-edit-category" class="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded transition-colors">
+                                حفظ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Product Modal -->
+    <div id="edit-product-modal" class="fixed inset-0 z-50 overflow-auto hidden">
+        <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="modal-container bg-white dark:bg-gray-800 w-full max-w-lg mx-auto rounded-lg shadow-lg overflow-hidden">
+                <div class="px-6 py-4 bg-primary text-white">
+                    <h3 class="text-lg font-bold">تعديل المنتج</h3>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="modal-edit-product-name" class="block mb-2 font-medium">اسم المنتج</label>
+                            <input type="text" id="modal-edit-product-name" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-base" placeholder="أدخل اسم المنتج">
+                        </div>
+                        <div>
+                            <label for="modal-edit-product-price" class="block mb-2 font-medium">السعر بالدولار</label>
+                            <input type="number" id="modal-edit-product-price" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-base" placeholder="السعر">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="modal-edit-product-price-syp" class="block mb-2 font-medium">السعر بالليرة السورية</label>
+                        <input type="text" id="modal-edit-product-price-syp" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-600 text-base" readonly placeholder="يحسب تلقائياً">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="modal-edit-product-bg-color" class="block mb-2 font-medium">لون الخلفية</label>
+                            <input type="color" id="modal-edit-product-bg-color" class="w-full h-10 rounded cursor-pointer">
+                        </div>
+                        <div>
+                            <label for="modal-edit-product-text-color" class="block mb-2 font-medium">لون النص</label>
+                            <input type="color" id="modal-edit-product-text-color" class="w-full h-10 rounded cursor-pointer">
+                        </div>
+                    </div>
+                    <div class="flex justify-between">
+                        <button id="modal-delete-product" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition-colors">
+                            حذف المنتج
+                        </button>
+                        <div class="flex space-x-2 space-x-reverse">
+                            <button id="modal-cancel-edit-product" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                                إلغاء
+                            </button>
+                            <button id="modal-save-edit-product" class="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded transition-colors">
+                                حفظ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Register service worker for offline functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').then(registration => {
+                    console.log('Service worker registered:', registration);
+                }).catch(error => {
+                    console.log('Service worker registration failed:', error);
+                });
+            });
+        }
+        
+        // PWA Install functionality
+        let deferredPrompt;
+        const installPrompt = document.getElementById('install-prompt');
+        const installNowBtn = document.getElementById('install-now');
+        const installLaterBtn = document.getElementById('install-later');
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            // Show the install button
+            installPrompt.style.display = 'block';
+        });
+        
+        installNowBtn.addEventListener('click', () => {
+            // Hide the app provided install promotion
+            installPrompt.style.display = 'none';
+            // Show the install prompt
+            deferredPrompt.prompt();
+            // Wait for the user to respond to the prompt
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                } else {
+                    console.log('User dismissed the install prompt');
+                }
+                deferredPrompt = null;
+            });
+        });
+        
+        installLaterBtn.addEventListener('click', () => {
+            installPrompt.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
+```
+
+```javascript id=appJsFile
+// App state
+let categories = [];
+let products = {};  // Structured as {categoryId: [products]}
+let currentCategory = null;
+let currentEditingProduct = null;
+let dollarRate = 13000; // Default value
+let dataChanged = false; // Track if data has been changed
+let searchTerm = ''; // Current search term
+
+// DOM elements - Main UI
+const dollarRateInput = document.getElementById('dollar-rate');
+const homeBtn = document.getElementById('home-btn');
+const categoryBreadcrumb = document.getElementById('category-breadcrumb');
+const categoryNameDisplay = document.getElementById('category-name-display');
+const editCategoryNameBtn = document.getElementById('edit-category-name-btn');
+const saveDataBtn = document.getElementById('save-data-btn');
+const searchInput = document.getElementById('search-input');
+const clearSearchBtn = document.getElementById('clear-search');
+const searchResultsCount = document.getElementById('search-results-count');
+const exportDataBtn = document.getElementById('export-data');
+const importDataBtn = document.getElementById('import-data');
+const importFileInput = document.getElementById('import-file');
+
+// DOM elements - Categories view
+const categoriesView = document.getElementById('categories-view');
+const categoriesList = document.getElementById('categories-list');
+const noCategoriesEl = document.getElementById('no-categories');
+
+// DOM elements - Category details view
+const categoryDetailsView = document.getElementById('category-details-view');
+const productsTable = document.getElementById('products-table');
+const productsBody = document.getElementById('products-body');
+const noProductsEl = document.getElementById('no-products');
+
+// DOM elements - Fixed action buttons
+const addCategoryBtn = document.getElementById('add-category-btn');
+const addProductBtn = document.getElementById('add-product-btn');
+
+// DOM elements - Add Category Modal
+const addCategoryModal = document.getElementById('add-category-modal');
+const modalCategoryName = document.getElementById('modal-category-name');
+const modalCategoryBgColor = document.getElementById('modal-category-bg-color');
+const modalCategoryTextColor = document.getElementById('modal-category-text-color');
+const modalSaveCategory = document.getElementById('modal-save-category');
+const modalCancelCategory = document.getElementById('modal-cancel-category');
+
+// DOM elements - Add Product Modal
+const addProductModal = document.getElementById('add-product-modal');
+const modalProductName = document.getElementById('modal-product-name');
+const modalProductPrice = document.getElementById('modal-product-price');
+const modalProductPriceSYP = document.getElementById('modal-product-price-syp');
+const modalProductBgColor = document.getElementById('modal-product-bg-color');
+const modalProductTextColor = document.getElementById('modal-product-text-color');
+const modalSaveProduct = document.getElementById('modal-save-product');
+const modalCancelProduct = document.getElementById('modal-cancel-product');
+
+// DOM elements - Edit Category Modal
+const editCategoryModal = document.getElementById('edit-category-modal');
+const modalEditCategoryName = document.getElementById('modal-edit-category-name');
+const modalEditCategoryBgColor = document.getElementById('modal-edit-category-bg-color');
+const modalEditCategoryTextColor = document.getElementById('modal-edit-category-text-color');
+const modalDeleteCategory = document.getElementById('modal-delete-category');
+const modalSaveEditCategory = document.getElementById('modal-save-edit-category');
+const modalCancelEditCategory = document.getElementById('modal-cancel-edit-category');
+
+// DOM elements - Edit Product Modal
+const editProductModal = document.getElementById('edit-product-modal');
+const modalEditProductName = document.getElementById('modal-edit-product-name');
+const modalEditProductPrice = document.getElementById('modal-edit-product-price');
+const modalEditProductPriceSYP = document.getElementById('modal-edit-product-price-syp');
+const modalEditProductBgColor = document.getElementById('modal-edit-product-bg-color');
+const modalEditProductTextColor = document.getElementById('modal-edit-product-text-color');
+const modalDeleteProduct = document.getElementById('modal-delete-product');
+const modalSaveEditProduct = document.getElementById('modal-save-edit-product');
+const modalCancelEditProduct = document.getElementById('modal-cancel-edit-product');
+
+// Load data from localStorage with improved error handling
+function loadData() {
+    try {
+        console.log("بدء تحميل البيانات من التخزين المحلي...");
+        
+        const savedCategories = localStorage.getItem('app_categories');
+        const savedProducts = localStorage.getItem('app_products');
+        const savedDollarRate = localStorage.getItem('app_dollarRate');
+        
+        console.log("البيانات المحفوظة:", { 
+            savedCategories: savedCategories ? "data found" : "no data", 
+            savedProducts: savedProducts ? "data found" : "no data", 
+            savedDollarRate: savedDollarRate 
+        });
+        
+        // Initialize with empty arrays/objects if nothing is saved
+        categories = [];
+        products = {};
+        
+        if (savedCategories) {
+            try {
+                categories = JSON.parse(savedCategories);
+                console.log("تم تحميل الأقسام:", categories.length);
+            } catch (e) {
+                console.error("خطأ في تحليل بيانات الأقسام:", e);
+                categories = [];
+            }
+        }
+        
+        if (savedProducts) {
+            try {
+                products = JSON.parse(savedProducts);
+                console.log("تم تحميل المنتجات");
+            } catch (e) {
+                console.error("خطأ في تحليل بيانات المنتجات:", e);
+                products = {};
+            }
+        }
+        
+        if (savedDollarRate) {
+            dollarRate = parseFloat(savedDollarRate) || 13000;
+            dollarRateInput.value = dollarRate;
+            console.log("تم تحميل سعر الدولار:", dollarRate);
+        }
+        
+        dataChanged = false;
+        updateSaveButtonStatus();
+        
+    } catch (error) {
+        console.error("خطأ في تحميل البيانات:", error);
+        // Reset to defaults on error
+        categories = [];
+        products = {};
+        dollarRate = 13000;
+        dollarRateInput.value = dollarRate;
+    }
+}
+
+// Save data to localStorage with improved error handling and split storage
+function saveData() {
+    try {
+        console.log("محاولة حفظ البيانات...");
+        
+        // حفظ كل مجموعة بيانات بشكل منفصل
+        localStorage.setItem('app_categories', JSON.stringify(categories));
+        localStorage.setItem('app_products', JSON.stringify(products));
+        localStorage.setItem('app_dollarRate', dollarRate.toString());
+        
+        // التحقق من نجاح الحفظ
+        const savedCategories = localStorage.getItem('app_categories');
+        const savedProducts = localStorage.getItem('app_products');
+        
+        if (!savedCategories || !savedProducts) {
+            throw new Error("فشل في التحقق من البيانات المحفوظة");
+        }
+        
+        // إذا وصلنا إلى هنا، فقد نجح الحفظ
+        dataChanged = false;
+        updateSaveButtonStatus();
+        console.log("تم حفظ البيانات بنجاح");
+        
+        return true;
+    } catch (error) {
+        console.error("خطأ في حفظ البيانات:", error);
+        
+        // Try to diagnose the issue
+        try {
+            // Check storage usage
+            const storageInfo = calculateStorageUsage();
+            console.log("معلومات التخزين:", storageInfo);
+            
+            if (storageInfo.percentUsed > 90) {
+                alert("تحذير: مساحة التخزين المحلي ممتلئة تقريبًا. قم بتصدير بياناتك ثم حذف بعض العناصر.");
+            } else {
+                alert("حدث خطأ أثناء حفظ البيانات: " + error.message);
+            }
+        } catch (diagError) {
+            alert("حدث خطأ أثناء حفظ البيانات. قد تفقد التغييرات عند تحديث الصفحة.");
+        }
+        
+        return false;
+    }
+}
+
+// Calculate storage usage for diagnostics
+function calculateStorageUsage() {
+    let total = 0;
+    let used = 0;
+    
+    // Estimate localStorage size (depends on browser)
+    const estimatedMax = 5 * 1024 * 1024; // ~5MB is commonly the limit
+    
+    // Calculate used size
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        used += (key.length + value.length) * 2; // UTF-16 characters are 2 bytes each
+    }
+    
+    return {
+        used: used,
+        max: estimatedMax,
+        percentUsed: (used / estimatedMax) * 100
+    };
+}
+
+// Update save button to reflect data status
+function updateSaveButtonStatus() {
+    if (dataChanged) {
+        saveDataBtn.classList.add('animate-bounce');
+        saveDataBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+        saveDataBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+        saveDataBtn.querySelector('svg').classList.add('animate-spin');
+    } else {
+        saveDataBtn.classList.remove('animate-bounce');
+        saveDataBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+        saveDataBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+        saveDataBtn.querySelector('svg').classList.remove('animate-spin');
+    }
+}
+
+// Mark data as changed and needing save
+function markDataChanged() {
+    dataChanged = true;
+    updateSaveButtonStatus();
+}
+
+// Export data as JSON file
+exportDataBtn.addEventListener('click', function() {
+    try {
+        // Create data object with all app data
+        const exportData = {
+            categories: categories,
+            products: products,
+            dollarRate: dollarRate,
+            exportDate: new Date().toISOString(),
+            version: '1.0.0'
+        };
+        
+        // Convert to JSON string
+        const jsonData = JSON.stringify(exportData, null, 2);
+        
+        // Create a blob and download link
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create download link and trigger click
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `product-manager-export-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+        alert('تم تصدير البيانات بنجاح');
+    } catch (error) {
+        console.error('خطأ في تصدير البيانات:', error);
+        alert('حدث خطأ أثناء تصدير البيانات');
+    }
+});
+
+// Import data from JSON file
+importDataBtn.addEventListener('click', function() {
+    importFileInput.click();
+});
+
+importFileInput.addEventListener('change', function(e) {
+    if (!e.target.files.length) return;
+    
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = function(event) {
+        try {
+            const importedData = JSON.parse(event.target.result);
+            
+            // Validate imported data structure
+            if (!importedData.categories || !importedData.products || importedData.dollarRate === undefined) {
+                throw new Error('بنية البيانات المستوردة غير صالحة');
+            }
+            
+            if (confirm('سيتم استبدال جميع البيانات الحالية بالبيانات المستوردة. هل أنت متأكد؟')) {
+                // Import the data
+                categories = importedData.categories;
+                products = importedData.products;
+                dollarRate = parseFloat(importedData.dollarRate);
+                dollarRateInput.value = dollarRate;
+                
+                saveData();
+                renderCategories();
+                
+                if (currentCategory) {
+                    // If we're in a category view, re-render that too
+                    if (products[currentCategory]) {
+                        renderProducts(currentCategory);
+                    } else {
+                        // If the current category doesn't exist anymore, go back to home
+                        showCategoriesView();
+                    }
+                }
+                
+                alert('تم استيراد البيانات بنجاح');
+            }
+        } catch (error) {
+            console.error('خطأ في استيراد البيانات:', error);
+            alert('حدث خطأ أثناء استيراد البيانات. تأكد من اختيار ملف صالح.');
+        }
+        
+        // Reset file input
+        e.target.value = '';
+    };
+    
+    reader.readAsText(file);
+});
+
+// Update dollar rate
+dollarRateInput.addEventListener('input', function() {
+    dollarRate = parseFloat(this.value) || 0;
+    markDataChanged();
+    
+    // Update prices in modals
+    updateModalProductPriceSYP();
+    updateModalEditProductPriceSYP();
+    
+    // Update products list if in category view
+    if (currentCategory !== null) {
+        renderProducts(currentCategory);
+    }
+});
+
+// Explicitly save data when button clicked
+saveDataBtn.addEventListener('click', function() {
+    if (saveData()) {
+        // Show success message
+        const originalText = this.innerHTML;
+        this.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            تم الحفظ
+        `;
+        
+        setTimeout(() => {
+            this.innerHTML = originalText;
+        }, 2000);
+    }
+});
+
+// Search functionality
+searchInput.addEventListener('input', function() {
+    searchTerm = this.value.trim().toLowerCase();
+    
+    if (searchTerm) {
+        clearSearchBtn.classList.remove('hidden');
+        searchResultsCount.classList.remove('hidden');
+    } else {
+        clearSearchBtn.classList.add('hidden');
+        searchResultsCount.classList.add('hidden');
+    }
+    
+    // Perform search based on current view
+    if (currentCategory === null) {
+        // Search in categories view
+        renderCategories();
+    } else {
+        // Search in products view
+        renderProducts(currentCategory);
+    }
+});
+
+// Clear search
+clearSearchBtn.addEventListener('click', function() {
+    searchInput.value = '';
+    searchTerm = '';
+    clearSearchBtn.classList.add('hidden');
+    searchResultsCount.classList.add('hidden');
+    
+    // Clear search and re-render current view
+    if (currentCategory === null) {
+        renderCategories();
+    } else {
+        renderProducts(currentCategory);
+    }
+});
+
+// Highlight search matches in text
+function highlightText(text, searchTerm) {
+    if (!searchTerm) return text;
+    
+    const pattern = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+    return text.replace(pattern, '<span class="highlight">$1</span>');
+}
+
+// Escape regular expression special characters
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Toggle action buttons based on current view
+function updateActionButtons() {
+    if (currentCategory === null) {
+        // In categories view, show add category button, hide add product button
+        addCategoryBtn.classList.remove('hidden');
+        addProductBtn.classList.add('hidden');
+    } else {
+        // In products view, show add product button, hide add category button
+        addCategoryBtn.classList.add('hidden');
+        addProductBtn.classList.remove('hidden');
+    }
+}
+
+// Open add category modal
+addCategoryBtn.addEventListener('click', function() {
+    showModal(addCategoryModal);
+    modalCategoryName.focus();
+});
+
+// Open add product modal
+addProductBtn.addEventListener('click', function() {
+    if (!currentCategory) {
+        alert('الرجاء اختيار قسم أولاً لإضافة منتج إليه');
+        return;
+    }
+    
+    showModal(addProductModal);
+    modalProductName.focus();
+});
+
+// Update SYP price in add product modal
+modalProductPrice.addEventListener('input', updateModalProductPriceSYP);
+
+function updateModalProductPriceSYP() {
+    const productPrice = parseFloat(modalProductPrice.value) || 0;
+    const sypPrice = productPrice * dollarRate;
+    modalProductPriceSYP.value = sypPrice > 0 ? sypPrice.toLocaleString() + ' ل.س' : '';
+}
+
+// Update SYP price in edit product modal
+modalEditProductPrice.addEventListener('input', updateModalEditProductPriceSYP);
+
+function updateModalEditProductPriceSYP() {
+    const productPrice = parseFloat(modalEditProductPrice.value) || 0;
+    const sypPrice = productPrice * dollarRate;
+    modalEditProductPriceSYP.value = sypPrice > 0 ? sypPrice.toLocaleString() + ' ل.س' : '';
+}
+
+// Save category from modal
+modalSaveCategory.addEventListener('click', function() {
+    const categoryName = modalCategoryName.value.trim();
+    const bgColor = modalCategoryBgColor.value;
+    const textColor = modalCategoryTextColor.value;
+    
+    if (!categoryName) {
+        alert('الرجاء إدخال اسم القسم');
+        return;
+    }
+    
+    // Check if category already exists
+    if (categories.some(cat => cat.name === categoryName)) {
+        alert('هذا القسم موجود بالفعل');
+        return;
+    }
+    
+    try {
+        console.log("إضافة قسم جديد:", categoryName);
+        
+        const newCategory = {
+            id: Date.now().toString(), // Use timestamp as unique ID
+            name: categoryName,
+            bgColor: bgColor,
+            textColor: textColor,
+            created: new Date().toISOString()
+        };
+        
+        // Make sure categories is initialized as an array
+        if (!Array.isArray(categories)) {
+            console.error("خطأ: categories ليست مصفوفة!", categories);
+            categories = [];
+        }
+        
+        categories.push(newCategory);
+        
+        // Initialize empty products array for this category
+        products[newCategory.id] = [];
+        
+        modalCategoryName.value = '';
+        markDataChanged();
+        renderCategories();
+        
+        hideModal(addCategoryModal);
+        
+        // Show confirmation
+        alert(`تم إضافة القسم "${categoryName}" بنجاح`);
+        
+    } catch (error) {
+        console.error("خطأ في إضافة القسم:", error);
+        alert("حدث خطأ أثناء إضافة القسم. يرجى المحاولة مرة أخرى.");
+    }
+});
+
+// Cancel category modal
+modalCancelCategory.addEventListener('click', function() {
+    modalCategoryName.value = '';
+    hideModal(addCategoryModal);
+});
+
+// Save product from modal
+modalSaveProduct.addEventListener('click', function() {
+    if (!currentCategory) return;
+    
+    const productName = modalProductName.value.trim();
+    const productPrice = parseFloat(modalProductPrice.value);
+    const bgColor = modalProductBgColor.value;
+    const textColor = modalProductTextColor.value;
+    
+    if (!productName) {
+        alert('الرجاء إدخال اسم المنتج');
+        return;
+    }
+    
+    if (isNaN(productPrice) || productPrice <= 0) {
+        alert('الرجاء إدخال سعر صحيح للمنتج');
+        return;
+    }
+    
+    const newProduct = {
+        id: Date.now().toString(),
+        name: productName,
+        price: productPrice,
+        bgColor: bgColor,
+        textColor: textColor,
+        created: new Date().toISOString()
+    };
+    
+    // Add product to current category
+    products[currentCategory].push(newProduct);
+    
+    // Clear inputs
+    modalProductName.value = '';
+    modalProductPrice.value = '';
+    modalProductPriceSYP.value = '';
+    
+    markDataChanged();
+    renderProducts(currentCategory);
+    
+    hideModal(addProductModal);
+    
+    // Show confirmation
+    alert(`تم إضافة المنتج "${productName}" بنجاح`);
+});
+
+// Cancel product modal
+modalCancelProduct.addEventListener('click', function() {
+    modalProductName.value = '';
+    modalProductPrice.value = '';
+    modalProductPriceSYP.value = '';
+    hideModal(addProductModal);
+});
+
+// Edit category name
+editCategoryNameBtn.addEventListener('click', function() {
+    if (!currentCategory) return;
+    
+    const category = categories.find(cat => cat.id === currentCategory);
+    if (!category) return;
+    
+    modalEditCategoryName.value = category.name;
+    modalEditCategoryBgColor.value = category.bgColor || '#5D5CDE';
+    modalEditCategoryTextColor.value = category.textColor || '#FFFFFF';
+    
+    showModal(editCategoryModal);
+    modalEditCategoryName.focus();
+});
+
+// Save edited category name
+modalSaveEditCategory.addEventListener('click', function() {
+    if (!currentCategory) return;
+    
+    const newName = modalEditCategoryName.value.trim();
+    const newBgColor = modalEditCategoryBgColor.value;
+    const newTextColor = modalEditCategoryTextColor.value;
+    
+    if (!newName) {
+        alert('الرجاء إدخال اسم القسم');
+        return;
+    }
+    
+    // Check if new name already exists for a different category
+    if (categories.some(cat => cat.name === newName && cat.id !== currentCategory)) {
+        alert('هذا الاسم موجود بالفعل لقسم آخر');
+        return;
+    }
+    
+    // Update category name
+    const category = categories.find(cat => cat.id === currentCategory);
+    if (category) {
+        category.name = newName;
+        category.bgColor = newBgColor;
+        category.textColor = newTextColor;
+        
+        categoryNameDisplay.textContent = newName;
+        markDataChanged();
+        renderCategories();
+        
+        // Update header
+        categoryNameDisplay.textContent = newName;
+        
+        hideModal(editCategoryModal);
+        
+        // Show confirmation
+        alert('تم تعديل القسم بنجاح');
+    }
+});
+
+// Delete category from edit modal
+modalDeleteCategory.addEventListener('click', function() {
+    if (!currentCategory) return;
+    
+    deleteCategory(currentCategory);
+    hideModal(editCategoryModal);
+});
+
+// Cancel edit category modal
+modalCancelEditCategory.addEventListener('click', function() {
+    hideModal(editCategoryModal);
+});
+
+// Edit product (opens edit modal)
+function editProduct(productId) {
+    if (!currentCategory) return;
+    
+    const categoryProducts = products[currentCategory] || [];
+    const product = categoryProducts.find(p => p.id === productId);
+    
+    if (!product) return;
+    
+    // Store current editing product
+    currentEditingProduct = productId;
+    
+    // Populate form
+    modalEditProductName.value = product.name;
+    modalEditProductPrice.value = product.price;
+    modalEditProductBgColor.value = product.bgColor || '#FFFFFF';
+    modalEditProductTextColor.value = product.textColor || '#000000';
+    updateModalEditProductPriceSYP();
+    
+    // Show modal
+    showModal(editProductModal);
+    modalEditProductName.focus();
+}
+
+// Save edited product
+modalSaveEditProduct.addEventListener('click', function() {
+    if (!currentCategory || !currentEditingProduct) return;
+    
+    const newName = modalEditProductName.value.trim();
+    const newPrice = parseFloat(modalEditProductPrice.value);
+    const newBgColor = modalEditProductBgColor.value;
+    const newTextColor = modalEditProductTextColor.value;
+    
+    if (!newName) {
+        alert('الرجاء إدخال اسم المنتج');
+        return;
+    }
+    
+    if (isNaN(newPrice) || newPrice <= 0) {
+        alert('الرجاء إدخال سعر صحيح للمنتج');
+        return;
+    }
+    
+    // Find and update product
+    const categoryProducts = products[currentCategory] || [];
+    const product = categoryProducts.find(p => p.id === currentEditingProduct);
+    
+    if (product) {
+        product.name = newName;
+        product.price = newPrice;
+        product.bgColor = newBgColor;
+        product.textColor = newTextColor;
+        
+        markDataChanged();
+        renderProducts(currentCategory);
+        
+        hideModal(editProductModal);
+        currentEditingProduct = null;
+        
+        // Show confirmation
+        alert('تم تعديل المنتج بنجاح');
+    }
+});
+
+// Delete product from edit modal
+modalDeleteProduct.addEventListener('click', function() {
+    if (!currentCategory || !currentEditingProduct) return;
+    
+    deleteProduct(currentEditingProduct);
+    hideModal(editProductModal);
+    currentEditingProduct = null;
+});
+
+// Cancel edit product modal
+modalCancelEditProduct.addEventListener('click', function() {
+    hideModal(editProductModal);
+    currentEditingProduct = null;
+});
+
+// Delete a product
+function deleteProduct(productId) {
+    if (!currentCategory) return;
+    
+    if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+        products[currentCategory] = products[currentCategory].filter(product => product.id !== productId);
+        markDataChanged();
+        renderProducts(currentCategory);
+    }
+}
+
+// Delete a category
+function deleteCategory(categoryId) {
+    if (confirm('هل أنت متأكد من حذف هذا القسم وجميع منتجاته؟')) {
+        categories = categories.filter(category => category.id !== categoryId);
+        
+        // Delete associated products
+        delete products[categoryId];
+        
+        markDataChanged();
+        renderCategories();
+        
+        // If we're deleting the current category, go back to home
+        if (currentCategory === categoryId) {
+            showCategoriesView();
+        }
+    }
+}
+
+// Navigate to home (categories view)
+homeBtn.addEventListener('click', function() {
+    showCategoriesView();
+});
+
+// Show category details (navigate to category)
+function showCategoryDetails(categoryId) {
+    currentCategory = categoryId;
+    
+    // Find category object
+    const category = categories.find(cat => cat.id === categoryId);
+    if (!category) return;
+    
+    // Update UI
+    categoryNameDisplay.textContent = category.name;
+    
+    // Show breadcrumb
+    categoryBreadcrumb.classList.remove('hidden');
+    
+    // Switch view
+    showView(categoryDetailsView);
+    
+    // Update action buttons
+    updateActionButtons();
+    
+    // Render products
+    renderProducts(categoryId);
+}
+
+// Render categories in the home view
+function renderCategories() {
+    // Check if there are categories
+    if (categories.length === 0) {
+        noCategoriesEl.classList.remove('hidden');
+        categoriesList.innerHTML = '';
+        searchResultsCount.textContent = 'لا توجد أقسام';
+        return;
+    }
+    
+    // Sort categories by creation date (oldest first - so new categories appear at the end)
+    const sortedCategories = [...categories].sort((a, b) => 
+        new Date(a.created) - new Date(b.created)
+    );
+    
+    // Filter categories if search term exists
+    let filteredCategories = sortedCategories;
+    if (searchTerm) {
+        filteredCategories = sortedCategories.filter(category => 
+            category.name.toLowerCase().includes(searchTerm)
+        );
+        
+        // Update search results count
+        searchResultsCount.textContent = `تم العثور على ${filteredCategories.length} قسم`;
+    }
+    
+    // Hide "no categories" message if we have categories to show
+    noCategoriesEl.classList.toggle('hidden', filteredCategories.length > 0);
+    categoriesList.innerHTML = '';
+    
+    // If no search results, show a message
+    if (searchTerm && filteredCategories.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'text-center text-gray-500 dark:text-gray-400 p-8 col-span-full';
+        noResults.textContent = 'لا توجد نتائج تطابق بحثك';
+        categoriesList.appendChild(noResults);
+        return;
+    }
+    
+    filteredCategories.forEach(category => {
+        const productCount = products[category.id]?.length || 0;
+        const bgColor = category.bgColor || '#5D5CDE';
+        const textColor = category.textColor || '#FFFFFF';
+        
+        const categoryCard = document.createElement('div');
+        categoryCard.className = 'rounded-lg shadow p-4 hover:shadow-md transition-shadow cursor-pointer flex flex-col';
+        categoryCard.style.backgroundColor = bgColor;
+        categoryCard.style.color = textColor;
+        
+        // Highlight category name if search is active
+        const categoryNameHtml = searchTerm ? 
+            highlightText(category.name, searchTerm) : 
+            category.name;
+        
+        categoryCard.innerHTML = `
+            <div class="flex justify-between items-start mb-3">
+                <h3 class="text-lg font-bold">${categoryNameHtml}</h3>
+                <button class="mr-2 edit-cat-btn" style="color: ${textColor}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="mt-auto">
+                <span class="text-sm">
+                    <span class="font-bold">${productCount}</span> منتج
+                </span>
+            </div>
+        `;
+        
+        // Add click event to navigate to category details
+        categoryCard.addEventListener('click', (e) => {
+            // Don't navigate if clicking the edit button
+            if (!e.target.closest('.edit-cat-btn')) {
+                showCategoryDetails(category.id);
+            }
+        });
+        
+        // Add edit event
+        const editBtn = categoryCard.querySelector('.edit-cat-btn');
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            // Set current category and show edit modal
+            currentCategory = category.id;
+            modalEditCategoryName.value = category.name;
+            modalEditCategoryBgColor.value = category.bgColor || '#5D5CDE';
+            modalEditCategoryTextColor.value = category.textColor || '#FFFFFF';
+            showModal(editCategoryModal);
+            modalEditCategoryName.focus();
+        });
+        
+        categoriesList.appendChild(categoryCard);
+    });
+}
+
+// Render products for a specific category
+function renderProducts(categoryId) {
+    const categoryProducts = products[categoryId] || [];
+    
+    // Check if there are products
+    if (categoryProducts.length === 0) {
+        noProductsEl.classList.remove('hidden');
+        productsTable.classList.add('hidden');
+        searchResultsCount.textContent = 'لا توجد منتجات';
+        return;
+    }
+    
+    // Sort products by creation date (oldest first - so new products appear at the end)
+    const sortedProducts = [...categoryProducts].sort((a, b) => 
+        new Date(a.created) - new Date(b.created)
+    );
+    
+    // Filter products if search term exists
+    let filteredProducts = sortedProducts;
+    if (searchTerm) {
+        filteredProducts = sortedProducts.filter(product => 
+            product.name.toLowerCase().includes(searchTerm) || 
+            product.price.toString().includes(searchTerm)
+        );
+        
+        // Update search results count
+        searchResultsCount.textContent = `تم العثور على ${filteredProducts.length} منتج`;
+    }
+    
+    // Hide "no products" message if we have products to show
+    noProductsEl.classList.toggle('hidden', filteredProducts.length > 0);
+    productsTable.classList.toggle('hidden', filteredProducts.length === 0);
+    productsBody.innerHTML = '';
+    
+    // If we have search term but no results, show a message
+    if (searchTerm && filteredProducts.length === 0) {
+        noProductsEl.classList.remove('hidden');
+        productsTable.classList.add('hidden');
+        noProductsEl.textContent = 'لا توجد منتجات تطابق بحثك';
+        return;
+    }
+    
+    filteredProducts.forEach(product => {
+        const sypPrice = product.price * dollarRate;
+        const bgColor = product.bgColor || '#FFFFFF';
+        const textColor = product.textColor || '#000000';
+        
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-gray-200 dark:border-gray-700';
+        tr.style.backgroundColor = bgColor;
+        tr.style.color = textColor;
+        
+        // Highlight product name if search is active
+        const productNameHtml = searchTerm ? 
+            highlightText(product.name, searchTerm) : 
+            product.name;
+        
+        // Highlight price if it matches search
+        const productPriceHtml = searchTerm && product.price.toString().includes(searchTerm) ? 
+            highlightText(product.price.toFixed(2), searchTerm) : 
+            product.price.toFixed(2);
+        
+        tr.innerHTML = `
+            <td class="p-3">
+                <div class="flex items-center">
+                    <span>${productNameHtml}</span>
+                    <button class="mr-2 edit-product-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                    </button>
+                </div>
+            </td>
+            <td class="p-3">${productPriceHtml} $</td>
+            <td class="p-3">${sypPrice.toLocaleString()} ل.س</td>
+            <td class="p-3 text-center">
+                <button class="view-product-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                </button>
+            </td>
+        `;
+        
+        // Add edit product event
+        const editBtn = tr.querySelector('.edit-product-btn');
+        editBtn.addEventListener('click', () => {
+            editProduct(product.id);
+        });
+        
+        // Add view product event (could be expanded in the future)
+        const viewBtn = tr.querySelector('.view-product-btn');
+        viewBtn.addEventListener('click', () => {
+            editProduct(product.id);
+        });
+        
+        productsBody.appendChild(tr);
+    });
+}
+
+// Show categories view (home)
+function showCategoriesView() {
+    currentCategory = null;
+    categoryBreadcrumb.classList.add('hidden');
+    showView(categoriesView);
+    updateActionButtons();
+    
+    // Re-render categories with current search term
+    renderCategories();
+}
+
+// Show a modal dialog
+function showModal(modal) {
+    modal.classList.remove('hidden');
+    
+    // Activate modal elements with animation
+    setTimeout(() => {
+        modal.querySelector('.modal-overlay').classList.add('active');
+        modal.querySelector('.modal-container').classList.add('active');
+    }, 10);
+    
+    // Add event listeners to close modal when clicking outside
+    modal.querySelector('.modal-overlay').addEventListener('click', function() {
+        hideModal(modal);
+    });
+}
+
+// Hide a modal dialog
+function hideModal(modal) {
+    modal.querySelector('.modal-overlay').classList.remove('active');
+    modal.querySelector('.modal-container').classList.remove('active');
+    
+    // Wait for animation to finish before hiding
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+// Switch between views
+function showView(viewToShow) {
+    const views = document.querySelectorAll('.view-transition');
+    
+    views.forEach(view => {
+        if (view === viewToShow) {
+            view.classList.remove('hidden');
+            // Trigger animation
+            setTimeout(() => {
+                view.classList.add('active');
+            }, 50);
+        } else {
+            view.classList.remove('active');
+            // Wait for animation to finish before hiding
+            setTimeout(() => {
+                view.classList.add('hidden');
+            }, 300);
+        }
+    });
+}
+
+// Check if localStorage is available
+function checkStorage() {
+    try {
+        const testKey = 'test_localStorage';
+        localStorage.setItem(testKey, 'test');
+        
+        if (localStorage.getItem(testKey) === 'test') {
+            localStorage.removeItem(testKey);
+            return true;
+        }
+        return false;
+    } catch (e) {
+        return false;
+    }
+}
+
+// Reset app data (for debugging)
+function resetApp() {
+    if (confirm('سيتم حذف جميع البيانات. هل أنت متأكد؟')) {
+        localStorage.removeItem('app_categories');
+        localStorage.removeItem('app_products');
+        localStorage.removeItem('app_dollarRate');
+        
+        categories = [];
+        products = {};
+        dollarRate = 13000;
+        dollarRateInput.value = dollarRate;
+        
+        renderCategories();
+        alert('تم إعادة ضبط التطبيق بنجاح');
+    }
+}
+
+// Set up auto-save feature
+let autoSaveTimer;
+function setupAutoSave() {
+    // Clear any existing timer
+    if (autoSaveTimer) {
+        clearInterval(autoSaveTimer);
+    }
+    
+    // Set up new timer to save every 3 minutes if changes exist
+    autoSaveTimer = setInterval(() => {
+        if (dataChanged) {
+            console.log('Auto-saving data...');
+            saveData();
+        }
+    }, 3 * 60 * 1000); // 3 minutes
+}
+
+// Initialize the app
+function init() {
+    // First check if localStorage is available
+    if (!checkStorage()) {
+        alert('التخزين المحلي غير متاح في المتصفح. لن يتم حفظ البيانات بين الجلسات.');
+    }
+    
+    try {
+        loadData();
+        renderCategories();
+        updateActionButtons();
+        setupAutoSave();
+        
+        // Make functions available globally for event handlers
+        window.deleteProduct = deleteProduct;
+        window.deleteCategory = deleteCategory;
+        window.showCategoryDetails = showCategoryDetails;
+        window.resetApp = resetApp;  // For debugging
+        
+        // Debug info
+        console.log('App initialized successfully!');
+        console.log('Categories loaded:', categories.length);
+        console.log('Dollar rate:', dollarRate);
+        
+        // For easy debugging in console
+        console.log('DEBUG: You can use resetApp() to clear all data');
+    } catch (error) {
+        console.error('خطأ في تهيئة التطبيق:', error);
+        alert('حدث خطأ أثناء تحميل التطبيق. سيتم إعادة تهيئته.');
+        
+        // Reset to defaults
+        categories = [];
+        products = {};
+        dollarRate = 13000;
+        dollarRateInput.value = dollarRate;
+        renderCategories();
+    }
+}
+
+// Start the app
+init();
+```
+
+```javascript id=serviceWorkerFile
+// Service Worker for Product Manager App
+const CACHE_NAME = 'product-manager-cache-v1';
+const urlsToCache = [
+  '/',
+  '/index.html',
+  '/app.js',
+  '/manifest.json',
+  'https://cdn.tailwindcss.com'
+];
+
+// Install event - cache assets
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('Opened cache');
+        return cache.addAll(urlsToCache);
+      })
+      .catch(error => {
+        console.error('Error during service worker install:', error);
+      })
+  );
+});
+
+// Activate event - clean up old caches
+self.addEventListener('activate', event => {
+  const cacheWhitelist = [CACHE_NAME];
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+
+// Fetch event - serve from cache or network
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request)
+      .then(response => {
+        // Cache hit - return response
+        if (response) {
+          return response;
+        }
+        
+        // Clone the request because it's a one-time use
+        const fetchRequest = event.request.clone();
+        
+        return fetch(fetchRequest).then(
+          response => {
+            // Check if we received a valid response
+            if(!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+            
+            // Clone the response because it's a one-time use
+            const responseToCache = response.clone();
+            
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                // Don't cache if request method is not GET
+                if (event.request.method === 'GET') {
+                  cache.put(event.request, responseToCache);
+                }
+              });
+            
+            return response;
+          }
+        ).catch(error => {
+          // Network error, try to return a fallback
+          console.log('Fetch failed; returning offline page instead.', error);
+          // You could return a custom offline page here
+        });
+      })
+  );
+});
+```
+
+```json id=manifestFile
+{
+  "name": "إدارة المنتجات والأقسام",
+  "short_name": "إدارة المنتجات",
+  "description": "تطبيق لإدارة المنتجات والأقسام مع تحويل العملات",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5D5CDE",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%235D5CDE' rx='12' ry='12'/%3E%3Cpath fill='white' d='M7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h6v2H7v-2z'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
+```
+
+## كيفية تثبيت وتشغيل التطبيق على جهازك
+
+### طريقة 1: تنزيل الملفات واستخدامها محلياً
+
+1. **إنشاء مجلد جديد** على جهاز الكمبيوتر الخاص بك (مثال: إدارة-المنتجات)
+
+2. **إنشاء الملفات التالية** داخل المجلد:
+   - `index.html`: انسخ محتوى الكود الأول
+   - `app.js`: انسخ محتوى الكود الثاني
+   - `service-worker.js`: انسخ محتوى الكود الثالث
+   - `manifest.json`: انسخ محتوى الكود الرابع
+
+3. **تشغيل التطبيق**:
+   - يمكنك فتح ملف `index.html` مباشرة في المتصفح
+   - أو استخدام خادم محلي بسيط للحصول على تجربة أفضل
+
+### طريقة 2: استضافة التطبيق على الإنترنت
+
+يمكنك رفع الملفات إلى خدمات الاستضافة المجانية مثل:
+- GitHub Pages
+- Netlify
+- Vercel
+
+### طريقة 3: تثبيت التطبيق على الهاتف أو الكمبيوتر
+
+بعد فتح التطبيق في متصفح يدعم تطبيقات الويب التقدمية (PWA) مثل Chrome:
+
+1. على **الهاتف**:
+   - ستظهر إشعار "إضافة إلى الشاشة الرئيسية"
+   - أو ستظهر النافذة المضمنة في التطبيق تدعوك للتثبيت
+
+2. على **الكمبيوتر**:
+   - سيظهر زر التثبيت في شريط العنوان في متصفح Chrome
+   - أو اضغط على القائمة ثم "تثبيت التطبيق"
+
+## التحسينات الرئيسية في النسخة الجديدة
+
+1. **تحسين حفظ البيانات**:
+   - تم تحسين آلية حفظ واسترجاع البيانات
+   - إضافة حفظ تلقائي كل 3 دقائق
+   - تشخيص وإصلاح مشاكل التخزين
+
+2. **قابلية تثبيت التطبيق**: 
+   - يمكنك الآن تثبيت التطبيق على هاتفك أو كمبيوتر
+
+3. **العمل بدون إنترنت**:
+   - استخدام Service Worker للعمل بدون اتصال بالإنترنت
+
+4. **تحسين واجهة المستخدم**:
+   - إضافة رسالة تثبيت التطبيق
+   - تنظيم الملفات لتسهيل الصيانة
+
+5. **ميزات النسخة السابقة**:
+   - محرك البحث
+   - تصدير واستيراد البيانات
+   - تخصيص الألوان
+   - إظهار العناصر الجديدة في النهاية
+
+الآن لديك تطبيق كامل يمكن تثبيته والعمل به حتى بدون اتصال بالإنترنت!
